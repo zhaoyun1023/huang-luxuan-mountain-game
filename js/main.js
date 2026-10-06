@@ -39,6 +39,7 @@ const game = {
   flowerTimer: 0,
   shake: 0,
   flash: 0,
+  caughtTimer: 0,
   checkpoint: 0,
   objects: [],
   particles: [],
@@ -55,6 +56,14 @@ const player = {
   vy: 0,
   jumps: 0,
   invincible: 0,
+  step: 0
+};
+
+const chaser = {
+  x: -70,
+  y: groundY() - 57,
+  w: 36,
+  h: 57,
   step: 0
 };
 
@@ -87,6 +96,7 @@ function resetGame() {
   game.flowerTimer = 1.9;
   game.shake = 0;
   game.flash = 0;
+  game.caughtTimer = 0;
   game.checkpoint = 0;
   game.objects = [];
   game.particles = [];
@@ -96,6 +106,9 @@ function resetGame() {
   player.vy = 0;
   player.jumps = 0;
   player.invincible = 0;
+  chaser.x = -70;
+  chaser.y = groundY() - chaser.h;
+  chaser.step = 0;
 }
 
 function roundedRect(x, y, w, h, r) {
@@ -250,6 +263,44 @@ function drawPlayer() {
   ctx.restore();
 }
 
+function drawChaser() {
+  const x = chaser.x;
+  const y = chaser.y;
+  ctx.save();
+  ctx.translate(x + chaser.w / 2, y + chaser.h / 2);
+  ctx.rotate(game.state === 'caught' ? .12 : 0);
+  ctx.translate(-chaser.w / 2, -chaser.h / 2);
+  const stride = Math.sin(chaser.step) * 6;
+
+  // legs
+  ctx.strokeStyle = '#263c3a';
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(15, 43); ctx.lineTo(11 - stride, 56);
+  ctx.moveTo(23, 43); ctx.lineTo(28 + stride, 56);
+  ctx.stroke();
+  // blue jacket
+  ctx.fillStyle = '#507fa0';
+  roundedRect(6, 18, 27, 31, 9);
+  ctx.fill();
+  // reaching arms when he catches up
+  ctx.strokeStyle = '#507fa0';
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.moveTo(28, 27);
+  ctx.lineTo(game.state === 'caught' ? 43 : 35, game.state === 'caught' ? 31 : 38);
+  ctx.stroke();
+  // head and hair
+  ctx.fillStyle = '#efc3a4';
+  ctx.beginPath(); ctx.arc(20, 12, 11, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#2f3435';
+  ctx.beginPath(); ctx.arc(20, 9, 11.5, Math.PI, TAU); ctx.lineTo(31, 14); ctx.lineTo(27, 4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#343b39';
+  ctx.beginPath(); ctx.arc(24, 12, 1.2, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
 function spawn(type) {
   if (type === 'flower') {
     game.objects.push({ type, x: W + 30, y: groundY() - 45 - Math.random() * 75, w: 25, h: 25, hit: false });
@@ -294,6 +345,18 @@ function burst(x, y, color, count) {
 }
 
 function update(dt) {
+  if (game.state === 'caught') {
+    game.caughtTimer += dt;
+    chaser.step += dt * 19;
+    player.step += dt * 19;
+    player.x += 410 * dt;
+    chaser.x = player.x - 30;
+    if (player.x > W + 70) {
+      game.state = 'over';
+      player.x = W * 0.22;
+    }
+    return;
+  }
   if (game.state !== 'playing') return;
   game.elapsed += dt;
   game.distance += game.speed * dt / 9.5;
@@ -304,6 +367,11 @@ function update(dt) {
   game.flash = Math.max(0, game.flash - dt);
   player.invincible = Math.max(0, player.invincible - dt);
   player.step += dt * 10;
+  chaser.step += dt * 11;
+  const chaseGap = 43 + game.energy * .72;
+  const chaseTarget = player.x - chaseGap;
+  chaser.x += (chaseTarget - chaser.x) * Math.min(1, dt * 2.6);
+  chaser.y = groundY() - chaser.h;
 
   player.vy += 1550 * dt;
   player.y += player.vy * dt;
@@ -336,13 +404,19 @@ function update(dt) {
         game.shake = .32;
         game.flash = .18;
         burst(player.x + 20, player.y + 35, '#f29a72', 12);
-        if (game.energy <= 0) game.state = 'over';
+        if (game.energy <= 0) {
+          game.energy = 0;
+          game.state = 'caught';
+          game.caughtTimer = 0;
+        }
       }
     }
   });
   game.objects = game.objects.filter(o => o.x > -60 && !(o.hit && o.type === 'flower'));
   game.particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 250 * dt; p.life -= dt; });
   game.particles = game.particles.filter(p => p.life > 0);
+
+  if (game.state === 'caught') return;
 
   if (game.checkpoint < stories.length && game.distance >= stories[game.checkpoint].at) {
     game.story = stories[game.checkpoint];
@@ -420,6 +494,7 @@ function drawWorld() {
   drawBackground(game.distance / summitDistance);
   game.objects.forEach(drawObject);
   drawParticles();
+  drawChaser();
   drawPlayer();
   ctx.restore();
   drawHUD();
@@ -438,8 +513,8 @@ function drawEnd(won) {
     ctx.fillStyle = 'rgba(255,220,115,.25)'; ctx.beginPath(); ctx.arc(W * .78, H * .18, 80, 0, TAU); ctx.fill();
   }
   ctx.fillStyle = 'rgba(255,250,240,.95)'; roundedRect(24, H * .18, W - 48, H * .57, 28); ctx.fill();
-  text(won ? '登 顶 啦' : '先 歇 一 歇', W / 2, H * .265, 31, COLORS.ink, 'center', 700);
-  text(won ? '山顶的风，把一路的疲惫吹成了光。' : '爬山不怕慢，调整好再出发。', W / 2, H * .33, 15, COLORS.muted, 'center', 400);
+  text(won ? '登 顶 啦' : '被 追 上 啦', W / 2, H * .265, 31, COLORS.ink, 'center', 700);
+  text(won ? '山顶的风，把一路的疲惫吹成了光。' : '赵云追了上来，推着她飞快走出了画面。', W / 2, H * .33, 15, COLORS.muted, 'center', 400);
   ctx.fillStyle = '#edf1e8'; roundedRect(W * .14, H * .385, W * .72, 92, 18); ctx.fill();
   text(won ? '本次用时' : '到达海拔', W * .32, H * .42, 12, COLORS.muted, 'center', 400);
   text(won ? formatTime(game.elapsed) : `${Math.floor(game.distance)} m`, W * .32, H * .46, 22, COLORS.ink, 'center', 700);
@@ -447,7 +522,7 @@ function drawEnd(won) {
   text(String(game.score), W * .68, H * .46, 22, COLORS.ink, 'center', 700);
   if (won && game.best) text(`最佳用时 ${formatTime(game.best)}`, W / 2, H * .525, 13, COLORS.coralDark, 'center', 500);
   ctx.fillStyle = COLORS.coral; roundedRect(W * .18, H * .59, W * .64, 52, 26); ctx.fill();
-  text(won ? '再走一次' : '重新出发', W / 2, H * .59 + 26, 17, '#fff', 'center', 700);
+  text(won ? '再走一次' : '再跑一次', W / 2, H * .59 + 26, 17, '#fff', 'center', 700);
   text(won ? '每一步，都算数。' : '点击按钮，恢复全部体力', W / 2, H * .705, 13, COLORS.muted, 'center', 400);
 }
 
