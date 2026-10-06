@@ -368,7 +368,7 @@ function update(dt) {
   player.invincible = Math.max(0, player.invincible - dt);
   player.step += dt * 10;
   chaser.step += dt * 11;
-  const chaseGap = 43 + game.energy * .72;
+  const chaseGap = 44 + game.energy * .34;
   const chaseTarget = player.x - chaseGap;
   chaser.x += (chaseTarget - chaser.x) * Math.min(1, dt * 2.6);
   chaser.y = groundY() - chaser.h;
@@ -466,13 +466,15 @@ function drawTitle() {
   ctx.moveTo(W * .15, H * .49); ctx.lineTo(W * .44, H * .355); ctx.lineTo(W * .7, H * .49); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#78978a'; ctx.beginPath();
   ctx.moveTo(W * .38, H * .49); ctx.lineTo(W * .67, H * .38); ctx.lineTo(W * .9, H * .49); ctx.closePath(); ctx.fill();
+  chaser.x = W * .31; chaser.y = H * .407; chaser.step = 2.5;
+  ctx.save(); ctx.translate(0, -8); drawChaser(); ctx.restore();
   player.x = W * .45; player.y = H * .405; player.vy = 0; player.step = 1;
   ctx.save(); ctx.translate(0, -8); drawPlayer(); ctx.restore();
 
   text('一路向上，去看山顶的日出', W / 2, H * .555, 16, COLORS.muted, 'center', 400);
   ctx.fillStyle = COLORS.coral; roundedRect(W * .18, H * .61, W * .64, 54, 27); ctx.fill();
   text('开始登山', W / 2, H * .61 + 27, 18, '#fff', 'center', 700);
-  text('点击跳跃 · 再点一次二段跳', W / 2, H * .755, 13, 'rgba(255,255,255,.9)', 'center', 400);
+  text('赵云正在后面追 · 点击可二段跳', W / 2, H * .755, 13, 'rgba(255,255,255,.9)', 'center', 400);
 }
 
 function drawStory() {
