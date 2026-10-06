@@ -1,0 +1,15 @@
+{
+  "description": "黄璐漩的山野日记——微信小游戏",
+  "compileType": "game",
+  "libVersion": "3.6.5",
+  "appid": "touristappid",
+  "projectname": "huang-luxuan-mountain",
+  "setting": {
+    "es6": true,
+    "minified": false,
+    "postcss": true,
+    "urlCheck": false,
+    "checkSiteMap": false
+  },
+  "condition": {}
+}
