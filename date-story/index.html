@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#f6b8a5">
+  <meta name="description" content="赵云和黄露漩的互动约会故事小游戏。">
+  <title>今天，和你一起</title>
+  <style>
+    :root{--ink:#433735;--muted:#786a67;--cream:#fffaf3;--pink:#e87573;--pink2:#f6b8a5;--gold:#e9b85b;--green:#59796e}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#efd9ca;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink)}
+    button{font:inherit}
+    #game{position:relative;width:100%;height:100%;max-width:520px;margin:auto;overflow:hidden;background:#f6d8ca;box-shadow:0 0 50px #6e514744}
+    canvas{position:absolute;inset:0;width:100%;height:100%}
+    #topbar{position:absolute;top:max(14px,env(safe-area-inset-top));left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;z-index:3;opacity:0;transition:.35s}
+    #topbar.show{opacity:1}
+    .pill{padding:8px 13px;border-radius:18px;background:#fffaf0dd;box-shadow:0 5px 18px #704c3b18;font-size:12px;font-weight:700;backdrop-filter:blur(8px)}
+    #bond{color:#c95559}
+    #storyPanel{position:absolute;left:14px;right:14px;bottom:max(14px,env(safe-area-inset-bottom));z-index:4;background:#fffaf3f2;border:1px solid #fff;border-radius:24px;padding:20px 18px 16px;box-shadow:0 16px 45px #59372e35;transform:translateY(130%);transition:transform .42s cubic-bezier(.2,.85,.3,1);backdrop-filter:blur(13px)}
+    #storyPanel.show{transform:translateY(0)}
+    #speaker{display:inline-block;padding:5px 12px;margin-bottom:10px;border-radius:12px;background:#f5d3c9;color:#9f4f4f;font-size:12px;font-weight:800}
+    #storyText{min-height:48px;margin:0 0 16px;font-size:16px;line-height:1.75;font-weight:520}
+    #choices{display:grid;gap:9px}
+    .choice{width:100%;border:0;border-radius:16px;padding:13px 14px;text-align:left;background:#f3e9de;color:var(--ink);font-size:14px;line-height:1.4;box-shadow:inset 0 0 0 1px #ead9ca;transition:.12s}
+    .choice:active{transform:scale(.98);background:#efd8cf}
+    .choice b{color:#bd5b5e;margin-right:6px}
+    .continue{background:var(--pink);color:#fff;text-align:center;font-weight:800;box-shadow:none}
+    .screen{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:34px;text-align:center;background:linear-gradient(155deg,#f7c7b6,#f6e1ca 55%,#aec9bd);transition:opacity .45s,visibility .45s}
+    .screen.hidden{opacity:0;visibility:hidden;pointer-events:none}
+    .eyebrow{font-size:12px;letter-spacing:4px;color:#8d6058;font-weight:800;margin-bottom:12px}
+    h1{font-size:39px;line-height:1.2;margin:0;color:#4c3a38;text-shadow:0 3px #fff6ea80}
+    .subtitle{font-size:15px;line-height:1.8;color:#765f5b;margin:15px 0 28px}
+    .primary{border:0;border-radius:28px;padding:15px 42px;background:var(--pink);color:white;font-size:17px;font-weight:800;box-shadow:0 10px 24px #b55a5845}
+    .primary:active{transform:translateY(2px)}
+    .tiny{position:absolute;bottom:max(14px,env(safe-area-inset-bottom));font-size:10px;color:#7f6b6588}
+    #endScreen{background:linear-gradient(160deg,#263d49,#d78271 62%,#f4c873);color:#fff}
+    #endScreen h1{color:#fff;text-shadow:0 3px 16px #36201e88;font-size:35px}
+    #endScreen .subtitle{color:#fff9;max-width:330px}
+    #endingCard{width:min(360px,100%);padding:22px;margin:18px 0 22px;border-radius:23px;background:#fff2;border:1px solid #fff5;backdrop-filter:blur(10px)}
+    #endingTitle{font-weight:900;font-size:19px;margin-bottom:8px}
+    #endingText{font-size:14px;line-height:1.8;color:#fffd}
+    .endButtons{display:flex;gap:10px}
+    .endButtons button{border:1px solid #fff8;border-radius:22px;padding:12px 21px;background:#fff2;color:#fff;font-weight:750}
+    #toast{position:absolute;z-index:12;top:88px;left:50%;transform:translate(-50%,-20px);padding:9px 15px;border-radius:18px;background:#473937df;color:#fff;font-size:12px;opacity:0;pointer-events:none;transition:.3s;white-space:nowrap}
+    #toast.show{opacity:1;transform:translate(-50%,0)}
+    @media (max-height:650px){h1{font-size:32px}.subtitle{margin:10px 0 20px}#storyPanel{padding:15px 15px 12px}#storyText{font-size:14px;line-height:1.55;margin-bottom:11px}.choice{padding:10px 12px}}
+  </style>
+</head>
+<body>
+<main id="game">
+  <canvas id="scene"></canvas>
+  <div id="topbar">
+    <div class="pill" id="chapter">第一站 · 午后咖啡</div>
+    <div class="pill" id="bond">♥ 默契 50</div>
+  </div>
+
+  <section id="storyPanel">
+    <div id="speaker">旁白</div>
+    <p id="storyText"></p>
+    <div id="choices"></div>
+  </section>
+
+  <section class="screen" id="startScreen">
+    <div class="eyebrow">一个关于相遇与心动的故事</div>
+    <h1>今天，和你一起</h1>
+    <p class="subtitle">赵云 × 黄露漩<br>这一次，约会由你来选择。</p>
+    <button class="primary" id="startBtn">赴约</button>
+    <div class="tiny">原创互动剧情小游戏 · 建议开启声音</div>
+  </section>
+
+  <section class="screen hidden" id="endScreen">
+    <div class="eyebrow" style="color:#ffe7ce">约会日记 · 完成</div>
+    <h1 id="endHeadline">今晚的风很温柔</h1>
+    <div id="endingCard">
+      <div id="endingTitle"></div>
+      <div id="endingText"></div>
+    </div>
+    <div class="endButtons">
+      <button id="replayBtn">再约一次</button>
+      <button id="shareBtn">分享故事</button>
+    </div>
+  </section>
+  <div id="toast"></div>
+</main>
+
+<script>
+(() => {
+  const canvas = document.getElementById('scene');
+  const ctx = canvas.getContext('2d');
+  const panel = document.getElementById('storyPanel');
+  const speakerEl = document.getElementById('speaker');
+  const textEl = document.getElementById('storyText');
+  const choicesEl = document.getElementById('choices');
+  const topbar = document.getElementById('topbar');
+  const chapterEl = document.getElementById('chapter');
+  const bondEl = document.getElementById('bond');
+  const startScreen = document.getElementById('startScreen');
+  const endScreen = document.getElementById('endScreen');
+  const toast = document.getElementById('toast');
+  let W=0,H=0,dpr=1,time=0,bond=50,current='intro',locked=false,petals=[];
+
+  const scenes = {
+    intro:{place:'cafe',chapter:'第一站 · 午后咖啡',speaker:'旁白',text:'周六下午，赵云提前二十分钟到了咖啡馆。黄露漩推门进来时，他手里的菜单已经被翻了第七遍。',choices:[
+      ['A','笑着说：“我也刚到。”',4,'cafe1','她看了一眼桌上早已不冒热气的水，忍住笑：“真的吗？”'],
+      ['B','把准备好的小花递给她',8,'cafe1','那是一朵路边小花。黄露漩接过来：“今天的第一份惊喜，我收下啦。”'],
+      ['C','紧张得差点碰倒杯子',2,'cafe1','黄露漩扶住杯子，笑得眼睛弯弯：“看来你比我还期待。”']
+    ]},
+    cafe1:{place:'cafe',chapter:'第一站 · 午后咖啡',speaker:'黄露漩',text:'“今天去哪里？你不会只计划了喝咖啡吧？”',choices:[
+      ['A','去江边散步，看晚霞',7,'river','“好啊，今天的云看起来很会配合。”'],
+      ['B','先去夜市，把每样小吃分一半',9,'market','“这个计划很专业，尤其是分一半那句。”'],
+      ['C','没有计划，跟着你走',3,'river','“那你可要跟紧，我方向感不一定比你好。”']
+    ]},
+    river:{place:'river',chapter:'第二站 · 江边晚风',speaker:'旁白',text:'江风吹乱黄露漩的头发。刚走到桥边，细雨突然落了下来，而赵云只带了一把不太大的伞。',choices:[
+      ['A','把伞往她那边倾斜',9,'river2','走了很久，赵云的半边肩膀湿透了。黄露漩悄悄把伞推回中间。'],
+      ['B','两个人一起跑向屋檐',7,'river2','两人踩过一路水花，到屋檐下还在笑，像完成了一场临时比赛。'],
+      ['C','说：“雨不大，再走一会儿？”',4,'river2','黄露漩伸手接住雨滴：“可以，但感冒的人要请另一位喝热汤。”']
+    ]},
+    river2:{place:'river',chapter:'第二站 · 江边晚风',speaker:'赵云',text:'“其实……今天约你出来，我练习了很多遍开场白。”',choices:[
+      ['A','黄露漩：“刚才碰杯子那段也练了？”',7,'market','赵云愣了一下，两个人同时笑出声。'],
+      ['B','黄露漩：“不用练，做你自己就好。”',10,'market','雨声很轻，但这句话赵云听得特别清楚。'],
+      ['C','黄露漩：“那现在正式说一次？”',8,'market','赵云认真站好：“黄露漩，今天见到你，我很开心。”']
+    ]},
+    market:{place:'market',chapter:'第三站 · 灯火夜市',speaker:'旁白',text:'夜市亮起一串串灯。套圈摊前，老板说最后一只小熊很难套中。',choices:[
+      ['A','赵云挑战十个圈',6,'market2','前九个全部落空，第十个圈摇摇晃晃，居然套中了小熊。'],
+      ['B','两个人轮流投，合作挑战',10,'market2','黄露漩负责判断，赵云负责出手。第五个圈就稳稳落下。'],
+      ['C','不套了，去买两串糖葫芦',5,'market2','“小熊不能吃，糖葫芦可以。”这个理由成功说服了两个人。']
+    ]},
+    market2:{place:'market',chapter:'第三站 · 灯火夜市',speaker:'黄露漩',text:'“如果今天只能留下一张照片，你想在哪里拍？”',choices:[
+      ['A','灯火最热闹的街口',6,'hill','照片里人群模糊，只有他们笑得很清楚。'],
+      ['B','安静的江边长椅',8,'hill','相机定时的十秒里，两个人都偷偷整理了三次头发。'],
+      ['C','等到了山顶再拍',10,'hill','“好，那今天最后一站，就去看整座城的灯。”']
+    ]},
+    hill:{place:'hill',chapter:'最后一站 · 山顶夜色',speaker:'旁白',text:'山顶的风比想象中凉。城市在脚下闪烁，约会也快走到结尾。赵云想说点什么。',choices:[
+      ['A','“今天很开心，下次还一起吗？”',10,'ending','黄露漩点点头：“下次的路线，换我来计划。”'],
+      ['B','“以后每个好天气，都想告诉你。”',9,'ending','黄露漩望向远处的灯：“那坏天气呢？”赵云说：“也告诉你。”'],
+      ['C','什么都没说，只把外套递给她',7,'ending','黄露漩接过外套：“有些话，好像不用急着说完。”']
+    ]}
+  };
+
+  function resize(){
+    const rect=canvas.parentElement.getBoundingClientRect();
+    W=rect.width;H=rect.height;dpr=Math.min(devicePixelRatio||1,3);
+    canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    petals=Array.from({length:24},(_,i)=>({x:Math.random()*W,y:Math.random()*H,s:1+Math.random()*2,v:.3+Math.random()*.55,p:i}));
+  }
+
+  function showToast(message){toast.textContent=message;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1200)}
+  function updateBond(amount){bond=Math.max(0,Math.min(100,bond+amount));bondEl.textContent=`♥ 默契 ${bond}`;showToast(`默契 +${amount}`)}
+
+  function renderScene(id){
+    current=id;const s=scenes[id];if(!s)return finish();
+    chapterEl.textContent=s.chapter;speakerEl.textContent=s.speaker;textEl.textContent=s.text;choicesEl.innerHTML='';
+    s.choices.forEach(c=>{
+      const btn=document.createElement('button');btn.className='choice';btn.innerHTML=`<b>${c[0]}</b>${c[1]}`;
+      btn.addEventListener('click',()=>choose(c));choicesEl.appendChild(btn);
+    });
+  }
+
+  function choose(c){
+    if(locked)return;locked=true;updateBond(c[2]);
+    speakerEl.textContent='这一刻';textEl.textContent=c[4];choicesEl.innerHTML='';
+    const btn=document.createElement('button');btn.className='choice continue';btn.textContent=c[3]==='ending'?'看看结局':'继续约会';
+    btn.addEventListener('click',()=>{locked=false;if(c[3]==='ending')finish();else renderScene(c[3])});choicesEl.appendChild(btn);
+  }
+
+  function finish(){
+    panel.classList.remove('show');topbar.classList.remove('show');
+    const title=document.getElementById('endingTitle'),copy=document.getElementById('endingText'),headline=document.getElementById('endHeadline');
+    if(bond>=91){headline.textContent='最好的约会，是还有下次';title.textContent='结局 · 双向奔赴';copy.textContent='山顶照片拍下的那一刻，两个人都没有看镜头。赵云看着黄露漩，黄露漩也刚好看向赵云。城市很亮，但他们记住的是彼此的笑。';}
+    else if(bond>=78){headline.textContent='今晚的风很温柔';title.textContent='结局 · 刚刚好的心动';copy.textContent='回去的路上，他们没有说太多，却把脚步放得很慢。分别前，黄露漩说：“到家告诉我。”赵云知道，这不是故事的结尾。';}
+    else{headline.textContent='慢一点，也很好';title.textContent='结局 · 下一次再靠近';copy.textContent='第一次约会难免有些手忙脚乱。不过，两个人都愿意再多了解一点。真正重要的故事，本来就不用急着写完。';}
+    endScreen.classList.remove('hidden');
+  }
+
+  function roundRect(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
+  function drawBackground(place){
+    const grad=ctx.createLinearGradient(0,0,0,H);const night=place==='market'||place==='hill';
+    grad.addColorStop(0,night?'#263e50':place==='river'?'#9ccbc9':'#f3bca9');grad.addColorStop(1,night?'#da806e':'#f6dfc2');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+    if(place==='cafe'){
+      ctx.fillStyle='#fff6e9';ctx.fillRect(0,H*.15,W,H*.62);ctx.fillStyle='#b77a5b';ctx.fillRect(W*.64,H*.18,W*.28,H*.28);
+      ctx.fillStyle='#8eb0a1';for(let i=0;i<4;i++)ctx.fillRect(W*.67+i*W*.065,H*.21,W*.035,H*.2);
+      ctx.fillStyle='#ad7354';roundRect(W*.2,H*.62,W*.6,18,9);ctx.fillRect(W*.28,H*.62,10,H*.18);ctx.fillRect(W*.71,H*.62,10,H*.18);
+    }else if(place==='river'){
+      ctx.fillStyle='#6fa6a4';ctx.fillRect(0,H*.55,W,H*.3);ctx.strokeStyle='#dff3e8aa';ctx.lineWidth=2;for(let i=0;i<8;i++){ctx.beginPath();ctx.moveTo((i*83+time*12)%W,H*.62+i%3*15);ctx.lineTo(((i*83+time*12)%W)+45,H*.62+i%3*15);ctx.stroke()}
+      ctx.fillStyle='#586f69';ctx.fillRect(0,H*.8,W,H*.2);ctx.strokeStyle='#56645f';for(let x=0;x<W;x+=36){ctx.beginPath();ctx.moveTo(x,H*.48);ctx.lineTo(x+22,H*.55);ctx.stroke()}
+    }else{
+      ctx.fillStyle='#27363e';ctx.beginPath();ctx.moveTo(0,H*.52);for(let x=0;x<=W;x+=34)ctx.lineTo(x,H*.43-(x%102===0?45:(x*7)%19));ctx.lineTo(W,H*.7);ctx.lineTo(0,H*.7);ctx.fill();
+      const colors=['#ffd275','#ff9d88','#bde4d8'];for(let i=0;i<28;i++){ctx.fillStyle=colors[i%3];ctx.globalAlpha=.45+(i%4)*.12;ctx.fillRect((i*47)%W,H*.25+(i*31)%(H*.31),3+(i%3),3+(i%3))}ctx.globalAlpha=1;
+      ctx.fillStyle='#3b4a45';ctx.beginPath();ctx.moveTo(0,H*.77);ctx.quadraticCurveTo(W*.5,H*.67,W,H*.76);ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.fill();
+    }
+    petals.forEach(p=>{p.y+=p.v;p.x+=Math.sin(time+p.p)*.15;if(p.y>H){p.y=-5;p.x=Math.random()*W}ctx.fillStyle=night?'#ffd9ad88':'#fff7e699';ctx.beginPath();ctx.ellipse(p.x,p.y,p.s*1.5,p.s,.5,0,Math.PI*2);ctx.fill()});
+  }
+
+  function drawPerson(x,y,scale,girl){
+    ctx.save();ctx.translate(x,y+Math.sin(time*2+(girl?0:1)) * 2);ctx.scale(scale,scale);
+    ctx.fillStyle='#0002';ctx.beginPath();ctx.ellipse(0,76,29,7,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#314743';ctx.lineWidth=8;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-9,45);ctx.lineTo(-12,72);ctx.moveTo(9,45);ctx.lineTo(13,72);ctx.stroke();
+    ctx.fillStyle=girl?'#efb84b':'#4e7f9f';ctx.beginPath();ctx.roundRect(-24,-4,48,55,15);ctx.fill();
+    ctx.strokeStyle=girl?'#d75252':'#4e7f9f';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(-20,10);ctx.lineTo(-31,39);ctx.moveTo(20,10);ctx.lineTo(31,35);ctx.stroke();
+    ctx.fillStyle='#efc3a4';ctx.beginPath();ctx.arc(0,-29,22,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#352f2d';ctx.beginPath();ctx.arc(0,-34,23,Math.PI,Math.PI*2);ctx.fill();
+    if(girl){ctx.beginPath();ctx.arc(-20,-28,10,0,Math.PI*2);ctx.fill();ctx.fillStyle='#d75252';ctx.fillRect(-24,0,48,7)}else{ctx.fillRect(-19,-43,38,12)}
+    ctx.fillStyle='#423735';ctx.beginPath();ctx.arc(7,-29,2,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#9d5e54';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(7,-22,6,.2,1.35);ctx.stroke();
+    ctx.fillStyle='#fff9';ctx.font='700 11px sans-serif';ctx.textAlign='center';ctx.fillText(girl?'黄露漩':'赵云',0,-60);
+    ctx.restore();
+  }
+
+  function loop(ts){time=ts/1000;const place=scenes[current]?.place||'hill';drawBackground(place);drawPerson(W*.35,H*.48,1.05,false);drawPerson(W*.66,H*.48,1.05,true);requestAnimationFrame(loop)}
+
+  document.getElementById('startBtn').addEventListener('click',()=>{bond=50;bondEl.textContent='♥ 默契 50';current='intro';startScreen.classList.add('hidden');endScreen.classList.add('hidden');topbar.classList.add('show');panel.classList.add('show');renderScene('intro')});
+  document.getElementById('replayBtn').addEventListener('click',()=>{bond=50;endScreen.classList.add('hidden');topbar.classList.add('show');panel.classList.add('show');renderScene('intro')});
+  document.getElementById('shareBtn').addEventListener('click',async()=>{const data={title:'今天，和你一起',text:'来看看赵云和黄露漩的约会故事',url:location.href};try{if(navigator.share)await navigator.share(data);else{await navigator.clipboard.writeText(location.href);showToast('链接已复制')}}catch(e){}});
+  addEventListener('resize',resize);resize();requestAnimationFrame(loop);
+  if(new URLSearchParams(location.search).has('autostart')) document.getElementById('startBtn').click();
+})();
+</script>
+</body>
+</html>
